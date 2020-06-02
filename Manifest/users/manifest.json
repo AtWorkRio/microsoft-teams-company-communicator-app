@@ -1,0 +1,36 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.5/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.5",
+  "version": "1.0.0",
+  "id": "148a66bb-e83d-425a-927d-09f4299a9274",
+  "packageName": "com.microsoft.teams.companycommunicator",
+  "developer": {
+    "name": "At Work Rio Solutions Ltda.",
+    "websiteUrl": "https://atworkrio.com",
+    "privacyUrl": "https://atworkrio.com/privacy",
+    "termsOfUseUrl": "https://atworkrio.com/terms"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "SGCP Teams",
+    "full": "SGCP Teams - At Work Rio Solutions"
+  },
+  "description": {
+    "short": "SGCP Teams",
+    "full": "SGCP Teams broadcasts messages to multiple teams and individuals through channel posts and chat messages"
+  },
+  "accentColor": "#EB7500",
+  "bots": [
+    {
+      "botId": "db4aba9d-451a-464b-8074-b79a18010bc2",
+      "scopes": ["personal", "team"],
+      "supportsFiles": false,
+      "isNotificationOnly": false
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": ["awrs-sgcp-teams.azurefd.net"]
+}
