@@ -15,12 +15,12 @@
     "outline": "outline.png"
   },
   "name": {
-    "short": "SGCP Teams",
-    "full": "SGCP Teams - At Work Rio Solutions"
+    "short": "SGCP",
+    "full": "SGCP by At Work Rio Solutions"
   },
   "description": {
-    "short": "SGCP Teams",
-    "full": "SGCP Teams broadcasts messages to multiple teams and individuals through channel posts and chat messages"
+    "short": "SGCP - Enterprise document management",
+    "full": "SGCP - Enterprise document management"
   },
   "accentColor": "#EB7500",
   "bots": [
