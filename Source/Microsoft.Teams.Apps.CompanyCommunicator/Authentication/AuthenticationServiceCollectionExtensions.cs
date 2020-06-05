@@ -10,6 +10,7 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Authentication
     using Microsoft.AspNetCore.Authentication.AzureAD.UI;
     using Microsoft.AspNetCore.Authentication.JwtBearer;
     using Microsoft.AspNetCore.Authorization;
+    using Microsoft.AspNetCore.Builder;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.IdentityModel.Tokens;
@@ -55,7 +56,17 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Authentication
                         ValidIssuers = AuthenticationServiceCollectionExtensions.GetValidIssuers(configuration),
                         AudienceValidator = AuthenticationServiceCollectionExtensions.AudienceValidator,
                     };
-                });
+                })
+            .AddIdentityServerAuthentication(PolicyNames.AtWorkRioIdentity, options =>
+            {
+                var atWorkRioIdentityOptions = new AtWorkRioIdentityOptions();
+                configuration.Bind("AtWorkRioIdentity", atWorkRioIdentityOptions);
+                options.Authority = atWorkRioIdentityOptions.Authority;
+                options.ApiName = atWorkRioIdentityOptions.ApiName;
+                options.ApiSecret = atWorkRioIdentityOptions.ApiSecret;
+
+                options.RequireHttpsMetadata = false;
+            });
         }
 
         private static void ValidateAuthenticationConfigurationSettings(IConfiguration configuration)
@@ -128,10 +139,21 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Authentication
         {
             services.AddAuthorization(options =>
             {
+                //var defaultAuthorizationPolicyBuilder = new AuthorizationPolicyBuilder(
+                //    JwtBearerDefaults.AuthenticationScheme,
+                //    PolicyNames.AtWorkRioIdentity)
+                //    .RequireAuthenticatedUser()
+                //    .Build();
+                //options.DefaultPolicy = defaultAuthorizationPolicyBuilder;
+
                 var mustContainUpnClaimRequirement = new MustBeValidUpnRequirement();
                 options.AddPolicy(
                     PolicyNames.MustBeValidUpnPolicy,
                     policyBuilder => policyBuilder.AddRequirements(mustContainUpnClaimRequirement));
+
+                options.AddPolicy(
+                    PolicyNames.AtWorkRioIdentity,
+                    policyBuilder => policyBuilder.RequireAuthenticatedUser());
             });
 
             services.AddSingleton<IAuthorizationHandler, MustBeValidUpnHandler>();

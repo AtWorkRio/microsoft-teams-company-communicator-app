@@ -13,5 +13,7 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Authentication
         /// The name of the authorization policy, MustHaveUpnClaimPolicy.
         /// </summary>
         public const string MustBeValidUpnPolicy = "MustBeValidUpnPolicy";
+
+        public const string AtWorkRioIdentity = "AtWorkRioIdentity";
     }
 }
