@@ -44,8 +44,9 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Authentication
         {
             AuthenticationServiceCollectionExtensions.ValidateAuthenticationConfigurationSettings(configuration);
 
-            services.AddAuthentication(options => { options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme; })
-                .AddJwtBearer(options =>
+            services
+                .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
                 {
                     var azureADOptions = new AzureADOptions();
                     configuration.Bind("AzureAd", azureADOptions);
@@ -57,16 +58,16 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Authentication
                         AudienceValidator = AuthenticationServiceCollectionExtensions.AudienceValidator,
                     };
                 })
-            .AddIdentityServerAuthentication(PolicyNames.AtWorkRioIdentity, options =>
-            {
-                var atWorkRioIdentityOptions = new AtWorkRioIdentityOptions();
-                configuration.Bind("AtWorkRioIdentity", atWorkRioIdentityOptions);
-                options.Authority = atWorkRioIdentityOptions.Authority;
-                options.ApiName = atWorkRioIdentityOptions.ApiName;
-                options.ApiSecret = atWorkRioIdentityOptions.ApiSecret;
-
-                options.RequireHttpsMetadata = false;
-            });
+                .AddIdentityServerAuthentication(PolicyNames.AtWorkRioIdentity, options =>
+                {
+                    var atWorkRioIdentityOptions = new AtWorkRioIdentityOptions();
+                    configuration.Bind("AtWorkRioIdentity", atWorkRioIdentityOptions);
+                    
+                    options.Authority = atWorkRioIdentityOptions.Authority;
+                    options.ApiName = atWorkRioIdentityOptions.ApiName;
+                    options.ApiSecret = atWorkRioIdentityOptions.ApiSecret;
+                    options.RequireHttpsMetadata = false;
+                });
         }
 
         private static void ValidateAuthenticationConfigurationSettings(IConfiguration configuration)
@@ -151,9 +152,6 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Authentication
                     PolicyNames.MustBeValidUpnPolicy,
                     policyBuilder => policyBuilder.AddRequirements(mustContainUpnClaimRequirement));
 
-                options.AddPolicy(
-                    PolicyNames.AtWorkRioIdentity,
-                    policyBuilder => policyBuilder.RequireAuthenticatedUser());
             });
 
             services.AddSingleton<IAuthorizationHandler, MustBeValidUpnHandler>();

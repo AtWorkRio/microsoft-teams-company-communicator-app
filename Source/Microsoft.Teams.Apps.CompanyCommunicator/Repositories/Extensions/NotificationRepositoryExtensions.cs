@@ -46,6 +46,8 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Repositories.Extensions
                 Teams = notification.Teams,
                 Rosters = notification.Rosters,
                 AllUsers = notification.AllUsers,
+                FromEmail = notification.FromEmail,
+                ToEmail = notification.ToEmail,
             };
 
             await notificationRepository.CreateOrUpdateAsync(notificationEntity);

@@ -17,9 +17,9 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
     using Microsoft.Teams.Apps.CompanyCommunicator.Repositories.Extensions;
 
 
-    [Authorize(PolicyNames.MustBeValidUpnPolicy)]
-    [Route("api/quickNotifications")]
-    public class QuickNotificationsController : ControllerBase
+    [Authorize(AuthenticationSchemes = PolicyNames.AtWorkRioIdentity, Policy = PolicyNames.MustBeValidUpnPolicy)]
+    [Route("api/chatNotifications")]
+    public class ChatNotificationsController : ControllerBase
     {
         private readonly NotificationDataRepository notificationDataRepository;
         private readonly TeamDataRepository teamDataRepository;
@@ -27,12 +27,12 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
         private readonly DraftNotificationPreviewService draftNotificationPreviewService;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="DraftNotificationsController"/> class.
+        /// Initializes a new instance of the <see cref="ChatNotificationsController"/> class.
         /// </summary>
         /// <param name="notificationDataRepository">Notification data repository instance.</param>
         /// <param name="teamDataRepository">Team data repository instance.</param>
         /// <param name="draftNotificationPreviewService">Draft notification preview service.</param>
-        public QuickNotificationsController(
+        public ChatNotificationsController(
             NotificationDataRepository notificationDataRepository,
             TeamDataRepository teamDataRepository,
             NotificationDelivery notificationDelivery,
@@ -52,6 +52,11 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
         [HttpPost]
         public async Task<string> Create([FromBody] DraftNotification notification)
         {
+            if(string.IsNullOrWhiteSpace(notification.Title))
+            {
+                return null;
+            }
+
             var draftNotificationId = await this.notificationDataRepository.CreateDraftNotificationAsync(
                 notification,
                 this.HttpContext.User?.Identity?.Name);

@@ -64,7 +64,14 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.NotificationDelivery
 
             List<UserDataEntity> deDuplicatedReceiverEntities = new List<UserDataEntity>();
 
-            if (draftNotificationEntity.AllUsers)
+            if (!string.IsNullOrEmpty(draftNotificationEntity.ToEmail))
+            {
+                var rosters = await metadataProvider.GetAllTeamsRostersAsync(); // update users metadata
+
+                deDuplicatedReceiverEntities = rosters.Select(x => x.Value)
+                    .Where(x => x.Email == draftNotificationEntity.ToEmail || x.Upn == draftNotificationEntity.ToEmail).ToList();
+            }
+            else if (draftNotificationEntity.AllUsers)
             {
                 // Get all users
                 var usersUserDataEntityDictionary = await this.metadataProvider.GetUserDataDictionaryAsync();

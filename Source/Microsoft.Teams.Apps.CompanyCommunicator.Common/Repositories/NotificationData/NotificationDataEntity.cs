@@ -156,5 +156,8 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Common.Repositories.Notificat
         /// Gets or sets the sending started DateTime value.
         /// </summary>
         public DateTime? SendingStartedDate { get; set; }
+
+        public string ToEmail { get; set; }
+        public string FromEmail { get; set; }
     }
 }
