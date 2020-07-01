@@ -2,6 +2,8 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
+using Microsoft.Extensions.Logging;
+
 namespace Microsoft.Teams.Apps.CompanyCommunicator
 {
     using Microsoft.AspNetCore;
@@ -29,6 +31,14 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator
         /// <returns>A web host builder instance.</returns>
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .UseStartup<Startup>();
+                .UseStartup<Startup>()
+                .ConfigureLogging((hostingContext, logging) =>
+                {
+                    logging.ClearProviders();
+                    logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
+                    logging.AddConsole();
+                    logging.AddDebug();
+                    logging.AddEventSourceLogger();
+                });
     }
 }

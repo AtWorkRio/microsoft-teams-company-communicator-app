@@ -2,6 +2,9 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
+using System.Collections.Generic;
+using Microsoft.Bot.Schema;
+
 namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
 {
     using System;
@@ -41,6 +44,25 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task OnTurnAsync(ITurnContext turnContext, NextDelegate next, CancellationToken cancellationToken = default)
         {
+            //CancellationTokenSource cts = null;
+            //try
+            //{
+            //    cts = new CancellationTokenSource();
+            //    cancellationToken.Register(() => cts.Cancel());
+            //    string content = (string) turnContext.Activity.Attachments[0].Content;
+            //    if (content.Contains("/document"))
+            //    {
+            //        await SendTypingAsync(turnContext, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), cancellationToken);
+            //    }
+            //}
+            //finally
+            //{
+            //    if (cts != null)
+            //    {
+            //        cts.Cancel();
+            //    }
+            //}
+
             var isMsTeamsChannel = this.ValidateBotFrameworkChannelId(turnContext);
             if (!isMsTeamsChannel)
             {
@@ -84,6 +106,52 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
 
             var tenantId = turnContext?.Activity?.Conversation?.TenantId;
             return allowedTenantIds.Contains(tenantId);
+        }
+
+        
+        private static async Task SendTypingAsync(ITurnContext turnContext, TimeSpan delay, TimeSpan period, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        await SendTypingActivityAsync(turnContext, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    // if we happen to cancel when in the delay we will get a TaskCanceledException
+                    await Task.Delay(period, cancellationToken).ConfigureAwait(false);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // do nothing
+            }
+        }
+
+        private static async Task SendTypingActivityAsync(ITurnContext turnContext, CancellationToken cancellationToken)
+        {
+            // create a TypingActivity, associate it with the conversation and send immediately
+            var typingActivity = new Activity
+            {
+                Type = ActivityTypes.Message,
+                Attachments = new List<Attachment>
+                {
+                    new Attachment("application/pdf", "")
+                },
+                RelatesTo = turnContext.Activity.RelatesTo,
+            };
+
+            // sending the Activity directly on the Adapter avoids other Middleware and avoids setting the Responded
+            // flag, however, this also requires that the conversation reference details are explicitly added.
+            var conversationReference = turnContext.Activity.GetConversationReference();
+            typingActivity.ApplyConversationReference(conversationReference);
+
+            // make sure to send the Activity directly on the Adapter rather than via the TurnContext
+            await turnContext.Adapter.SendActivitiesAsync(turnContext, new Activity[] { typingActivity }, cancellationToken).ConfigureAwait(false);
         }
     }
 }

@@ -71,15 +71,16 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator
         {
             if (env.IsDevelopment())
             {
+                Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
                 app.UseDeveloperExceptionPage();
             }
             else
             {
                 app.UseExceptionHandler("/Error");
                 app.UseHsts();
+                app.UseHttpsRedirection();
             }
 
-            app.UseHttpsRedirection();
             app.UseAuthentication();
 
             app.UseStaticFiles();
