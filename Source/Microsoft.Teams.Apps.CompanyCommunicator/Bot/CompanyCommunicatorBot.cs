@@ -2,6 +2,10 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
+using System.Collections.Generic;
+using IdentityModel.Client;
+using Newtonsoft.Json.Linq;
+
 namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
 {
     using System;
@@ -20,14 +24,18 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
         private static readonly string TeamRenamedEventType = "teamRenamed";
 
         private readonly TeamsDataCapture teamsDataCapture;
+        private readonly DiscoveryCache discoveryCache;
+        private readonly AtWorkRioIdentityOptions atWorkRioIdentityOptions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CompanyCommunicatorBot"/> class.
         /// </summary>
         /// <param name="teamsDataCapture">Teams data capture service.</param>
-        public CompanyCommunicatorBot(TeamsDataCapture teamsDataCapture)
+        public CompanyCommunicatorBot(TeamsDataCapture teamsDataCapture, DiscoveryCache discoveryCache, AtWorkRioIdentityOptions atWorkRioIdentityOptions)
         {
             this.teamsDataCapture = teamsDataCapture;
+            this.discoveryCache = discoveryCache;
+            this.atWorkRioIdentityOptions = atWorkRioIdentityOptions;
         }
 
         /// <summary>
@@ -69,6 +77,103 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
                 await this.teamsDataCapture.OnBotRemovedAsync(activity);
             }
         }
+
+        public override Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = new CancellationToken())
+        {
+            return base.OnTurnAsync(turnContext, cancellationToken);
+        }
+
+        //protected override async Task<InvokeResponse> OnInvokeActivityAsync(ITurnContext<IInvokeActivity> turnContext, CancellationToken cancellationToken)
+        //{
+        //    switch (turnContext.Activity.Name)
+        //    {
+        //        case "composeExtension/query":
+        //            return CreateInvokeResponse(await OnTeamsMessagingExtensionQueryAsync(turnContext, (MessagingExtensionQuery)turnContext.Activity.Value, cancellationToken).ConfigureAwait(false));
+
+        //        case "composeExtension/selectItem":
+        //            return CreateInvokeResponse(await OnTeamsMessagingExtensionSelectItemAsync(turnContext, turnContext.Activity.Value as JObject, cancellationToken).ConfigureAwait(false));
+
+        //        default:
+        //            return await base.OnInvokeActivityAsync(turnContext, cancellationToken).ConfigureAwait(false);
+        //    }
+        //}
+
+        //protected async Task<MessagingExtensionResponse> OnTeamsMessagingExtensionQueryAsync(ITurnContext<IInvokeActivity> turnContext, MessagingExtensionQuery query, CancellationToken cancellationToken)
+        //{
+        //    var text = query?.Parameters?[0]?.Value as string ?? string.Empty;
+
+        //    var docs = await CompanyCommunicatorBotFilterMiddleware.SearchDocuments(text, discoveryCache, atWorkRioIdentityOptions);
+
+        //    // We take every row of the results and wrap them in cards wrapped in in MessagingExtensionAttachment objects.
+        //    // The Preview is optional, if it includes a Tap, that will trigger the OnTeamsMessagingExtensionSelectItemAsync event back on this bot.
+        //    var attachments = docs.Select(package =>
+        //    {
+        //        var previewCard = new ThumbnailCard { Title = package.DocumentName, Tap = new CardAction { Type = "invoke", Value = package } };
+        //        //if (!string.IsNullOrEmpty(package.Item5))
+        //        //    previewCard.Images = new List<CardImage>() { new CardImage(package.Item5, "Icon") };
+
+        //        var attachment = new MessagingExtensionAttachment
+        //        {
+        //            ContentType = HeroCard.ContentType,
+        //            Content = new HeroCard { Title = package.DocumentName },
+        //            Preview = previewCard.ToAttachment(),
+        //        };
+
+        //        return attachment;
+        //    }).ToList();
+
+        //    // The list of MessagingExtensionAttachments must we wrapped in a MessagingExtensionResult wrapped in a MessagingExtensionResponse.
+        //    return new MessagingExtensionResponse
+        //    {
+        //        ComposeExtension = new MessagingExtensionResult
+        //        {
+        //            Type = "result",
+        //            AttachmentLayout = "list",
+        //            Attachments = attachments
+        //        }
+        //    };
+        //}
+
+        //protected Task<MessagingExtensionResponse> OnTeamsMessagingExtensionSelectItemAsync(ITurnContext<IInvokeActivity> turnContext, JObject query, CancellationToken cancellationToken)
+        //{
+        //    // The Preview card's Tap should have a Value property assigned, this will be returned to the bot in this event. 
+        //    var (packageId, version, description, projectUrl, iconUrl) = query.ToObject<(string, string, string, string, string)>();
+
+        //    // We take every row of the results and wrap them in cards wrapped in in MessagingExtensionAttachment objects.
+        //    // The Preview is optional, if it includes a Tap, that will trigger the OnTeamsMessagingExtensionSelectItemAsync event back on this bot.
+        //    var card = new ThumbnailCard
+        //    {
+        //        Title = $"{packageId}, {version}",
+        //        Subtitle = description,
+        //        Buttons = new List<CardAction>
+        //            {
+        //                new CardAction { Type = ActionTypes.OpenUrl, Title = "Nuget Package", Value = $"https://www.nuget.org/packages/{packageId}" },
+        //                new CardAction { Type = ActionTypes.OpenUrl, Title = "Project", Value = projectUrl },
+        //            },
+        //    };
+
+        //    if (!string.IsNullOrEmpty(iconUrl))
+        //    {
+        //        card.Images = new List<CardImage>() { new CardImage(iconUrl, "Icon") };
+        //    }
+
+        //    var attachment = new MessagingExtensionAttachment
+        //    {
+        //        ContentType = ThumbnailCard.ContentType,
+        //        Content = card,
+        //    };
+
+        //    return Task.FromResult(new MessagingExtensionResponse
+        //    {
+        //        ComposeExtension = new MessagingExtensionResult
+        //        {
+        //            Type = "result",
+        //            AttachmentLayout = "list",
+        //            Attachments = new List<MessagingExtensionAttachment> { attachment }
+        //        }
+        //    });
+        //}
+
 
         private bool IsTeamInformationUpdated(IConversationUpdateActivity activity)
         {

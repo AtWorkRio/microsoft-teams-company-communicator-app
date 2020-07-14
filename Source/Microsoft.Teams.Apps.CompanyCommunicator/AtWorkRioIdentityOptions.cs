@@ -12,5 +12,9 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator
         public string ApiName { get; set; }
         public string ApiSecret { get; set; }
 
+        public string SgcpTeamsClientId { get; set; }
+        public string SgcpTeamsClientSecret { get; set; }
+        public string SgcpTeamsApiUrl { get; set; }
+
     }
 }

@@ -1,0 +1,28 @@
+{
+    "name": "sgcp-teams-local",
+    "description": "",
+    "services": [
+        {
+            "type": "endpoint",
+            "appId": "db4aba9d-451a-464b-8074-b79a18010bc2",
+            "appPassword": "2-KLQSDk0h5P88k1-3-d0Es_hOuZvP1qSL",
+            "channelService": "",
+            "endpoint": "http://localhost:6000/api/messages",
+            "id": "47c25480-bbc9-11ea-84f0-b17c4996cda1",
+            "name": "sgcp-teams-local"
+        },
+        {
+            "type": "abs",
+            "appId": "db4aba9d-451a-464b-8074-b79a18010bc2",
+            "id": "125",
+            "resourceGroup": "sgcp",
+            "serviceName": "awrs-sgcp-teams",
+            "subscriptionId": "b5fa8c48-b8f5-40d4-b8f3-203dd05ddfbf",
+            "tenantId": "75d0a1ff-df51-448e-b0a4-a895deb5e9f0"
+        }
+    ],
+    "padlock": "",
+    "version": "2.0",
+    "path": "C:\\Users\\lucas\\dev\\microsoft-teams-company-communicator-app\\sgcp-teams-local.bot",
+    "overrides": null
+}

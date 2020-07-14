@@ -31,6 +31,7 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Controllers
         /// </summary>
         /// <param name="notificationDataRepository">Notification data repository instance.</param>
         /// <param name="teamDataRepository">Team data repository instance.</param>
+        /// <param name="notificationDelivery">TODO</param>
         /// <param name="draftNotificationPreviewService">Draft notification preview service.</param>
         public ChatNotificationsController(
             NotificationDataRepository notificationDataRepository,

@@ -2,6 +2,8 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
+using IdentityModel.Client;
+
 namespace Microsoft.Teams.Apps.CompanyCommunicator.Authentication
 {
     using System;
@@ -43,6 +45,15 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Authentication
             IConfiguration configuration)
         {
             AuthenticationServiceCollectionExtensions.ValidateAuthenticationConfigurationSettings(configuration);
+            
+            var atWorkRioIdentityOptions = configuration.GetSection("AtWorkRioIdentity").Get<AtWorkRioIdentityOptions>();
+            
+            services.AddTransient<AtWorkRioIdentityOptions>(svc => atWorkRioIdentityOptions);
+            services.AddSingleton((serviceProvider) =>
+            {
+                var options = serviceProvider.GetService<AtWorkRioIdentityOptions>();
+                return new DiscoveryCache(options.Authority);
+            });
 
             services
                 .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -60,14 +71,12 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Authentication
                 })
                 .AddIdentityServerAuthentication(PolicyNames.AtWorkRioIdentity, options =>
                 {
-                    var atWorkRioIdentityOptions = new AtWorkRioIdentityOptions();
-                    configuration.Bind("AtWorkRioIdentity", atWorkRioIdentityOptions);
-                    
                     options.Authority = atWorkRioIdentityOptions.Authority;
                     options.ApiName = atWorkRioIdentityOptions.ApiName;
                     options.ApiSecret = atWorkRioIdentityOptions.ApiSecret;
                     options.RequireHttpsMetadata = false;
-                });
+                })
+                ;
         }
 
         private static void ValidateAuthenticationConfigurationSettings(IConfiguration configuration)

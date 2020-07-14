@@ -3,7 +3,13 @@
 // </copyright>
 
 using System.Collections.Generic;
+using System.Net.Http;
+using IdentityModel.Client;
 using Microsoft.Bot.Schema;
+using Microsoft.Bot.Schema.Teams;
+using Microsoft.Teams.Apps.CompanyCommunicator.Models;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
 {
@@ -22,15 +28,23 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
         private static readonly string MsTeamsChannelId = "msteams";
 
         private readonly IConfiguration configuration;
+        private readonly DiscoveryCache discoveryCache;
+        private readonly AtWorkRioIdentityOptions atWorkRioIdentityOptions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CompanyCommunicatorBotFilterMiddleware"/> class.
         /// </summary>
         /// <param name="configuration">ASP.NET Core <see cref="IConfiguration"/> instance.</param>
-        public CompanyCommunicatorBotFilterMiddleware(IConfiguration configuration)
+        public CompanyCommunicatorBotFilterMiddleware(IConfiguration configuration, DiscoveryCache discoveryCache,
+            AtWorkRioIdentityOptions atWorkRioIdentityOptions)
         {
             this.configuration = configuration;
+            this.discoveryCache = discoveryCache;
+            this.atWorkRioIdentityOptions = atWorkRioIdentityOptions;
         }
+        
+        public const string DocumentCommand1 = "/doc ";
+        public const string DocumentCommand2 = "/docs ";
 
         /// <summary>
         /// Processes an incoming activity.
@@ -42,26 +56,37 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
         /// <param name="next">The delegate to call to continue the bot middleware pipeline.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task OnTurnAsync(ITurnContext turnContext, NextDelegate next, CancellationToken cancellationToken = default)
+        public async Task OnTurnAsync(ITurnContext turnContext, NextDelegate next,
+            CancellationToken cancellationToken = default)
         {
-            //CancellationTokenSource cts = null;
-            //try
-            //{
-            //    cts = new CancellationTokenSource();
-            //    cancellationToken.Register(() => cts.Cancel());
-            //    string content = (string) turnContext.Activity.Attachments[0].Content;
-            //    if (content.Contains("/document"))
-            //    {
-            //        await SendTypingAsync(turnContext, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), cancellationToken);
-            //    }
-            //}
-            //finally
-            //{
-            //    if (cts != null)
-            //    {
-            //        cts.Cancel();
-            //    }
-            //}
+            CancellationTokenSource cts = null;
+            try
+            {
+                cts = new CancellationTokenSource();
+                cancellationToken.Register(() => cts.Cancel());
+                var text = turnContext.Activity.Text.Trim().ToLower();
+
+                if (text.Contains(DocumentCommand1) || text.Contains(DocumentCommand2))
+                {
+                    var commandParam = text
+                        .Replace(DocumentCommand1, string.Empty)
+                        .Replace(DocumentCommand2, string.Empty)
+                        .Trim();
+                    var docs = await SearchDocuments(commandParam, discoveryCache, atWorkRioIdentityOptions);
+
+                    if (docs.Count == 1)
+                    {
+                        await SendDocument(turnContext, docs[0], cancellationToken).ConfigureAwait(false);
+                    }
+                    else if (docs.Count > 1)
+                    {
+                        await SendDocumentOptions(turnContext, docs, cancellationToken).ConfigureAwait(false);
+                    }
+                }
+            }
+            catch
+            {
+            }
 
             var isMsTeamsChannel = this.ValidateBotFrameworkChannelId(turnContext);
             if (!isMsTeamsChannel)
@@ -80,6 +105,12 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
 
         private bool ValidateBotFrameworkChannelId(ITurnContext turnContext)
         {
+            var disableChannelFilter = this.configuration.GetValue<bool>("DisableChannelFilter", false);
+            if (disableChannelFilter)
+            {
+                return true;
+            }
+
             return CompanyCommunicatorBotFilterMiddleware.MsTeamsChannelId.Equals(
                 turnContext?.Activity?.ChannelId,
                 StringComparison.OrdinalIgnoreCase);
@@ -108,50 +139,92 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
             return allowedTenantIds.Contains(tenantId);
         }
 
-        
-        private static async Task SendTypingAsync(ITurnContext turnContext, TimeSpan delay, TimeSpan period, CancellationToken cancellationToken)
+        private static async Task SendDocument(ITurnContext turnContext, SgcpDocumentListDTO doc,
+            CancellationToken cancellationToken)
         {
-            try
-            {
-                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            var message = MessageFactory.Attachment(new Attachment(
+                doc.ContentType,
+                doc.ContentUrl, // "http://localhost:5002/api/projects/c87fa576-567c-4fa4-adfa-9dc96df27165/documents/801982fb-2891-4711-ae9f-31abad94a66d/download?access_token=c9ad03cf5e6034d948cb7bdc04a09cbe3e604a047ed799ffe773b4b034385f8b",
+                null,
+                doc.DocumentName
+            ), $"Project: {doc.ProjectName}");
 
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    if (!cancellationToken.IsCancellationRequested)
-                    {
-                        await SendTypingActivityAsync(turnContext, cancellationToken).ConfigureAwait(false);
-                    }
-
-                    // if we happen to cancel when in the delay we will get a TaskCanceledException
-                    await Task.Delay(period, cancellationToken).ConfigureAwait(false);
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                // do nothing
-            }
+            await turnContext.SendActivityAsync(message, cancellationToken).ConfigureAwait(false);
         }
 
-        private static async Task SendTypingActivityAsync(ITurnContext turnContext, CancellationToken cancellationToken)
-        {
-            // create a TypingActivity, associate it with the conversation and send immediately
-            var typingActivity = new Activity
+        private static async Task SendDocumentOptions(ITurnContext turnContext, List<SgcpDocumentListDTO> docs,
+            CancellationToken cancellationToken)
+        {.
+            var card = new HeroCard
             {
-                Type = ActivityTypes.Message,
-                Attachments = new List<Attachment>
+                Title = $"I've found ({docs.Count}) documents",
+                Buttons = docs.Select(x => new CardAction
                 {
-                    new Attachment("application/pdf", "")
-                },
-                RelatesTo = turnContext.Activity.RelatesTo,
+                    Type = ActionTypes.OpenUrl,
+                    Title = x.DocumentName,
+                    Value = x.ContentUrl
+                }).ToList()
             };
 
-            // sending the Activity directly on the Adapter avoids other Middleware and avoids setting the Responded
-            // flag, however, this also requires that the conversation reference details are explicitly added.
-            var conversationReference = turnContext.Activity.GetConversationReference();
-            typingActivity.ApplyConversationReference(conversationReference);
+            var response = MessageFactory.Attachment(card.ToAttachment());
 
-            // make sure to send the Activity directly on the Adapter rather than via the TurnContext
-            await turnContext.Adapter.SendActivitiesAsync(turnContext, new Activity[] { typingActivity }, cancellationToken).ConfigureAwait(false);
+            await turnContext.SendActivityAsync(response, cancellationToken).ConfigureAwait(false);
+
+            //var message = MessageFactory.SuggestedActions(
+            //    docs.Select(x => new CardAction
+            //    {
+            //        Title = $"{x.DocumentName}",
+            //        Type = ActionTypes.MessageBack,
+            //        Value = $"/doc {x.DocumentName}"
+            //    }).ToList(), "Suggested Documents");
+
+            //await turnContext.SendActivityAsync(message, cancellationToken).ConfigureAwait(false);
         }
+
+
+        public static async Task<List<SgcpDocumentListDTO>> SearchDocuments(string code, DiscoveryCache discoveryCache, AtWorkRioIdentityOptions atWorkRioIdentityOptions)
+        {
+            var disco = await discoveryCache.GetAsync();
+            if (disco.IsError) throw new Exception(disco.Error);
+
+            var tokenClient = new HttpClient();
+            var tokenResponse = await tokenClient.RequestClientCredentialsTokenAsync(new ClientCredentialsTokenRequest
+            {
+                Address = disco.TokenEndpoint,
+                ClientId = atWorkRioIdentityOptions.SgcpTeamsClientId,
+                ClientSecret = atWorkRioIdentityOptions.SgcpTeamsClientSecret,
+                Scope = "https://sgcp-teams.atworkrio.com https://plantra.atworkrio.com"
+            });
+
+            if (tokenResponse.IsError) throw new Exception(tokenResponse.Error);
+
+            // call API
+            var apiClient = new HttpClient();
+            apiClient.SetBearerToken(tokenResponse.AccessToken);
+
+            try
+            {
+                var json = await apiClient.GetStringAsync(
+                    $"{atWorkRioIdentityOptions.SgcpTeamsApiUrl}/teams/docSearch?code={Uri.EscapeUriString(code)}");
+                var docs = JsonConvert.DeserializeObject<Envelope<List<SgcpDocumentListDTO>>>(json);
+                if (docs.Result != null)
+                {
+                    return docs.Result;
+                }
+            }
+            catch
+            {
+            }
+
+            return new List<SgcpDocumentListDTO>();
+        }
+    }
+
+    public class SgcpDocumentListDTO
+    {
+        public string ProjectName { get; set; }
+        public string DocumentName { get; set; }
+        public string ContentUrl { get; set; }
+        public string ContentType { get; set; }
     }
 }
