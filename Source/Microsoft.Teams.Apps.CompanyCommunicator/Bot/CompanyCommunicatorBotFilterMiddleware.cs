@@ -7,6 +7,7 @@ using System.Net.Http;
 using IdentityModel.Client;
 using Microsoft.Bot.Schema;
 using Microsoft.Bot.Schema.Teams;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Teams.Apps.CompanyCommunicator.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -43,8 +44,8 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
             this.atWorkRioIdentityOptions = atWorkRioIdentityOptions;
         }
         
-        public const string DocumentCommand1 = "/doc ";
-        public const string DocumentCommand2 = "/docs ";
+        public const string DocumentCommand1 = "/doc";
+        public const string DocumentCommand2 = "/docs";
 
         /// <summary>
         /// Processes an incoming activity.
@@ -69,8 +70,8 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
                 if (text.Contains(DocumentCommand1) || text.Contains(DocumentCommand2))
                 {
                     var commandParam = text
-                        .Replace(DocumentCommand1, string.Empty)
                         .Replace(DocumentCommand2, string.Empty)
+                        .Replace(DocumentCommand1, string.Empty)
                         .Trim();
                     var docs = await SearchDocuments(commandParam, discoveryCache, atWorkRioIdentityOptions);
 
@@ -154,10 +155,11 @@ namespace Microsoft.Teams.Apps.CompanyCommunicator.Bot
 
         private static async Task SendDocumentOptions(ITurnContext turnContext, List<SgcpDocumentListDTO> docs,
             CancellationToken cancellationToken)
-        {.
+        {
             var card = new HeroCard
             {
-                Title = $"I've found ({docs.Count}) documents",
+                Title = $"I've found ({docs.Count}) documents:",
+                Subtitle = $"Project - {docs.FirstOrDefault()?.ProjectName}",
                 Buttons = docs.Select(x => new CardAction
                 {
                     Type = ActionTypes.OpenUrl,
